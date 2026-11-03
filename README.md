@@ -5,6 +5,9 @@
 ## Requirements
 
 - Linux (tested), a USB connection to the DPS-150.
+- Membership in the `dialout` group (or the group owning the serial `tty`
+  node) so your user can open `/dev/ttyACM*` / `/dev/ttyDSP-150` — see
+  **Getting started → step 1** below.
 - Python **3.12** with `pyserial` and `pyserial-asyncio` (see `requirements.txt`):
 
   ```bash
@@ -38,6 +41,24 @@ has both is:
    The device is the USB device `2e3c:5740` ("Artery AT32 Virtual Com Port").
    The scanner prefers a stable friendly symlink (e.g. `/dev/ttyDSP-150`) over
    the raw `/dev/ttyACM*` node, so the path survives replugging.
+
+   Your user must be allowed to open the serial device. If opening the port
+   fails with `Permission denied`, add yourself to the group that owns the
+   `tty` nodes (usually `dialout`) and log out and back in (or reboot) so the
+   new group membership takes effect:
+
+   ```bash
+   sudo usermod -aG dialout "$USER"
+   # verify after re-login:
+   groups | grep dialout
+   ```
+
+   On distributions that use `uucp` or `tty` instead of `dialout`, use that
+   group name. A quick way to see which group applies to your device:
+
+   ```bash
+   ls -l /dev/ttyACM* /dev/ttyDSP-150
+   ```
 
 2. Set a voltage or current interactively (port comes from `config.py`):
 
