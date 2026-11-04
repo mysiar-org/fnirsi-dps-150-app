@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=FNIRSI DPS-150
+GenericName=Power Supply Control
+Comment=Control panel for the FNIRSI DPS-150 power supply
+Exec=/home/piotr/WORK/mysiar-org/fnirsi-dps-150-app/run-dps150.sh
+Path=/home/piotr/WORK/mysiar-org/fnirsi-dps-150-app
+Icon=/home/piotr/WORK/mysiar-org/fnirsi-dps-150-app/dps-150-app.png
+Terminal=false
+Categories=Utility;Electronics;
+Keywords=dps150;dps-150;fnirsi;power;supply;
+StartupNotify=true
