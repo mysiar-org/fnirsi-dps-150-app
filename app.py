@@ -95,6 +95,7 @@ class Backend:
         self.psu: DPS150 | None = None
         self.state = State()
         self.connected = False
+        self.locked = False
         self.error: str | None = None
         self._stop: asyncio.Event | None = None
 
@@ -138,16 +139,26 @@ class Backend:
         else:
             coro.close()
 
+    def set_locked(self, locked: bool) -> None:
+        self.locked = locked
+
     def set_voltage(self, volts: float) -> None:
+        if self.locked:
+            return
         self._submit(self.psu.set_voltage(volts, verify=True))
 
     def set_current(self, amps: float) -> None:
+        if self.locked:
+            return
         self._submit(self.psu.set_current(amps, verify=True))
 
     def set_output(self, enabled: bool) -> None:
+        if self.locked:
+            return
         self._submit(self.psu.set_output(enabled, verify=True))
 
     def close(self) -> None:
+        self.locked = False
         if self._stop is None:
             return
 
@@ -245,12 +256,14 @@ class QuantityRow:
         self.step_box.grid(row=1, column=1, padx=PADX, pady=PADY)
         self.step_box.bind("<Return>", self._on_enter)
 
-        ttk.Button(
+        self.minus_button = ttk.Button(
             parent, text="\u2212", width=3, command=lambda: self._nudge(-1)
-        ).grid(row=1, column=2, padx=(0, 4))
-        ttk.Button(parent, text="+", width=3, command=lambda: self._nudge(1)).grid(
-            row=1, column=3, padx=(0, PADX)
         )
+        self.minus_button.grid(row=1, column=2, padx=(0, 4))
+        self.plus_button = ttk.Button(
+            parent, text="+", width=3, command=lambda: self._nudge(1)
+        )
+        self.plus_button.grid(row=1, column=3, padx=(0, PADX))
 
         self.entry = ttk.Entry(
             parent, textvariable=self.entry_var, width=10, justify="right"
@@ -279,6 +292,13 @@ class QuantityRow:
             self.error_label.grid()
         else:
             self.error_label.grid_remove()
+
+    def set_locked(self, locked: bool) -> None:
+        widget_state = "disabled" if locked else "normal"
+        self.step_box.configure(state="disabled" if locked else "readonly")
+        self.minus_button.configure(state=widget_state)
+        self.plus_button.configure(state=widget_state)
+        self.entry.configure(state=widget_state)
 
     def _format(self, value: float) -> str:
         return format(value, self.format_spec)
@@ -342,6 +362,8 @@ class App(tk.Tk):
         self.resizable(False, False)
         self._error_shown = False
         self._connected_at: float | None = None
+        self._locked = False
+        self.lock_status_var = tk.StringVar(value="")
 
         try:
             ttk.Style(self).theme_use("clam")
@@ -368,6 +390,16 @@ class App(tk.Tk):
             ttk.Label(title_row, text=serial, font=("TkDefaultFont", 9)).pack(
                 side="left", padx=(8, 0)
             )
+        self.lock_button = ttk.Button(
+            title_row, text="Lock", width=8, command=self._toggle_lock
+        )
+        self.lock_button.pack(side="right")
+        ttk.Label(
+            title_row,
+            textvariable=self.lock_status_var,
+            font=SMALL_FONT,
+            foreground=ERROR_COLOR,
+        ).pack(side="right", padx=(0, PADX))
         self.status_var = tk.StringVar(value="connecting\u2026")
         ttk.Label(header, textvariable=self.status_var, font=SMALL_FONT).pack(
             anchor="w"
@@ -545,6 +577,18 @@ class App(tk.Tk):
         digits.grid(row=0, column=0, sticky="e", padx=(6, 2))
         unit_label.grid(row=0, column=1, sticky="sw", padx=(0, 6), pady=(0, 6))
 
+    def _toggle_lock(self) -> None:
+        self._set_locked(not self._locked)
+
+    def _set_locked(self, locked: bool) -> None:
+        self._locked = locked
+        self.backend.set_locked(locked)
+        self.voltage.set_locked(locked)
+        self.current.set_locked(locked)
+        self.toggle_button.configure(state="disabled" if locked else "normal")
+        self.lock_button.configure(text="Unlock" if locked else "Lock")
+        self.lock_status_var.set("LOCKED" if locked else "")
+
     def _toggle_output(self) -> None:
         self.backend.set_output(not self.backend.state.output_on)
 
@@ -598,6 +642,8 @@ class App(tk.Tk):
             )
         except OSError:
             pass
+        # Unlock first so the shutdown power-off action is always allowed.
+        self._set_locked(False)
         self.backend.close()
         self.destroy()
 

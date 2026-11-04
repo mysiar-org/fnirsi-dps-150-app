@@ -83,6 +83,40 @@ has both is:
    python app.py
    ```
 
+   Use the **Lock** button in the header to prevent accidental changes. While
+   locked, the voltage/current setpoints and the output on/off button are
+   disabled. Closing the window unlocks first, then turns the output off as
+   before.
+
+5. Optional desktop launcher.
+
+   `run-dps150.sh` starts the GUI with the project's virtualenv, switches to
+   the project directory first, and appends errors/output to
+   `${XDG_STATE_HOME:-$HOME/.local/state}/dps150-app.log`. Run it directly:
+
+   ```bash
+   ./run-dps150.sh
+   ```
+
+   The script expects the environment created by `make venv`; if
+   `venv/bin/python` is missing it shows an error (via `zenity` when available)
+   and exits.
+
+   `dps150.desktop` is a Linux desktop entry that launches that script from the
+   application menu, using `dps-150-app.png` as its icon. Its `Exec`, `Path`,
+   and `Icon` values are absolute paths for this checkout, so update them if
+   you move the project. Install it for the current user with:
+
+   ```bash
+   mkdir -p ~/.local/share/applications
+   cp dps150.desktop ~/.local/share/applications/
+   update-desktop-database ~/.local/share/applications
+   ```
+
+   The launcher then appears in the desktop application menu as
+   **FNIRSI DPS-150**. You can also double-click `dps150.desktop` in a file
+   manager that supports desktop entries.
+
 
 
 
@@ -97,7 +131,9 @@ has both is:
 | `set_amps.py` | Interactive prompt: ask for a current, validate it, send it to the device. |
 | `set_on.py` | Turn the output on. |
 | `set_off.py` | Turn the output off. |
-| `app.py` | Tkinter GUI: live V/A readouts, step +/- and typed entry, output on/off with a colored indicator. |
+| `app.py` | Tkinter GUI: live V/A readouts, step +/- and typed entry, output on/off with a colored indicator, and a lock button that disables all changes. |
+| `run-dps150.sh` | GUI launcher: uses `venv/bin/python`, changes to the project directory, and logs output to `${XDG_STATE_HOME:-$HOME/.local/state}/dps150-app.log`. |
+| `dps150.desktop` | Linux desktop-menu entry that starts `run-dps150.sh` with the project icon. |
 | `config.py` | Single line: the serial port to use (e.g. `PORT = "/dev/ttyDSP-150"`). |
 
 
